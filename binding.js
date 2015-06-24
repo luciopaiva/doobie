@@ -10,7 +10,9 @@
     }
 
     function canonicalArray(path, index) {
-        return canonical(path, '[' + index + ']');
+        var
+            prop = '[' + index + ']';
+        return path.length ? path + prop : prop;
     }
 
     /**
@@ -28,11 +30,18 @@
     /**
      * Elements annotated with attributes [model] or [model-array] will be added to the bindings map.
      */
-    function scanDOMForBindings() {
+    function scanDOMForBindings(root) {
 
-        $('[model]').each(function () {
-            addObserver($(this).attr('model'), $(this));
-            console.info('Registered <' + $(this).prop('tagName') + '> as observer for property "' + $(this).attr('model') + '"');
+        root = root || $(document);
+
+        root.find('[model]').each(function () {
+            var
+                path = $(this).attr('model');
+
+            if (!/\[]/.test(path)) { // avoid array templates (model attributes containing "[]")
+                addObserver(path, $(this));
+                console.info('Registered <' + $(this).prop('tagName') + '> as observer for property "' + path + '"');
+            }
         });
 
         // TODO implement a system for binding [model-array]s
@@ -76,25 +85,33 @@
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/observe
         Array.observe(objModel, function (changes) {
             changes.forEach(function (change) {
+                var
+                    caname = canonicalArray(path, change.name);
+
                 switch (change.type) {
                     case 'add':
                         // TODO this trigger should in fact trigger the entire array too, so that [model-array]s could update its loops accordingly
-                        trigger(canonicalArray(path, change.name), change.oldValue, objModel[change.name]);
+                        trigger(caname, change.oldValue, objModel[change.name]);
                         // must also observe new child and its descendants - if it is an object
-                        observe(canonicalArray(path, change.name), objModel[change.name], objModel);
+                        observe(caname, objModel[change.name], objModel);
                         break;
                     case 'update':
                         // TODO this trigger should in fact trigger the entire array too, so that [model-array]s could update its loops accordingly
-                        trigger(canonicalArray(path, change.name), change.oldValue, objModel[change.name]);
+                        trigger(caname, change.oldValue, objModel[change.name]);
                         break;
                     case 'delete':
                         // TODO this trigger should in fact trigger the entire array too, so that [model-array]s could update its loops accordingly
-                        trigger(canonicalArray(path, change.name), change.oldValue, objModel[change.name]);
+                        trigger(caname, change.oldValue, objModel[change.name]);
                         // TODO should all descendants be unobserved somehow?
                         // unobserve(objModel[change.name], objModel);
                         break;
                     case 'splice':
-                        // TODO: tell observers
+                        console.info('Splice index: ' + change.index);
+                        console.info('Splice removed:');
+                        console.dir(change.removed);
+                        console.info('Splice added count: ' + change.addedCount);
+                        triggerArray(caname, change.oldValue, change.object, change.index, change.removed, change.addedCount);
+                        // TODO see what was added and observe that too
                         break;
                 }
             })
@@ -139,6 +156,9 @@
     }
 
     function observe(path, objModel, parentModel) {
+
+        console.info('Observing <' + path + '>');
+
         /*
          Observes only non-null objects and arrays. Every other type of variable is silently ignored.
          Reference on variable types:
@@ -165,7 +185,65 @@
         // I think the easier way is to iterate over Object.keys(bindings) and trigger everybody manually
     }
 
+    function triggerArray(canonicalName, oldValue, newValue, index, removed, addedCount) {
+        var
+            existingClonedItems,
+            caname,
+            elemIndex,
+            elem;
+
+        if (bindings[canonicalName]) {
+            bindings[canonicalName].forEach(function (observer) {
+
+                console.info('Triggering observer ' + observer.prop('tagName') + ' for array ' + canonicalName);
+
+                if (observer instanceof jQuery) {
+
+                    observer.hide(); // make sure the template is hidden
+
+                    existingClonedItems = observer.nextAll('[model^="' + canonicalName + '["]'); // matches all siblings with attribute "model=name[*]"
+
+                    // first update removed items...
+                    if (removed.length > 0) {
+                        existingClonedItems.slice(index, index + removed.length).remove();
+                    }
+
+                    // ...then update added items
+                    if (addedCount > 0) {
+                        if (existingClonedItems.length == 0) {
+                            while (addedCount--) {
+
+                                elemIndex = index + addedCount;
+                                caname = canonicalArray(canonicalName, elemIndex);
+
+                                elem = observer.clone();
+                                elem.attr('model', caname);
+                                elem.insertAfter(observer);
+
+                                elem.find('[model^="' + canonicalName + '[]"]').each(function () {
+                                    $(this).attr('model', $(this).attr('model').replace(/\[]/, '['+ elemIndex + ']'));
+                                });
+
+                                scanDOMForBindings(elem);
+
+                                elem.show();
+                            }
+                        }
+                    }
+
+                } else if (typeof observer == 'function') {
+
+                    observer();
+                }
+            });
+
+            // TODO should also trigger all ascendants, a.k.a. "bubble up" the event
+        }
+    }
+
     function trigger(canonicalName, oldValue, newValue) {
+        console.info('TRIGGER <' + canonicalName + '>');
+
         if (bindings[canonicalName]) {
             bindings[canonicalName].forEach(function (observer) {
 
@@ -185,15 +263,18 @@
                 }
             });
 
-            // TODO should also trigger all ascendants, a.k.a. "bubble up" the event
+            // TODO should also trigger all ascendants? (a.k.a. "bubble up" the event?)
         }
     }
 
     function triggerAll(path, objModel) {
-        console.info('TALL: ' + path);
+        console.info('TRIGGER ALL: <' + path + '>');
 
         if ($.isArray(objModel)) {
-            // TODO implement
+            triggerArray(path, [], objModel, 0, [], objModel.length);
+            objModel.forEach(function (arrayItem, arrayIndex) {
+                triggerAll(canonicalArray(path, arrayIndex), arrayItem);
+            });
         } else if (typeof objModel == 'object' && objModel !== null) {
             Object.keys(objModel).forEach(function (propName) {
                 triggerAll(canonical(path, propName), objModel[propName]);
