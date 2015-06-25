@@ -1,0 +1,31 @@
+{
+  "name": "doobie",
+  "version": "0.1.0",
+  "description": "A minimalist two-way data-binding library for those who don't need big fat frameworks like Angular.js.",
+  "main": "doobie.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/luciopaiva/doobie.git"
+  },
+  "keywords": [
+    "data-binding",
+    "databind",
+    "binding",
+    "two-way",
+    "angular",
+    "jquery",
+    "library"
+  ],
+  "author": "Lucio Paiva (http://github.com/luciopaiva)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/luciopaiva/doobie/issues"
+  },
+  "homepage": "https://github.com/luciopaiva/doobie#readme"
+}
