@@ -1,4 +1,4 @@
-(function ($) {
+(function ($, console) {
     var
         model,
         ROOT_PROPERTY = '',
@@ -57,132 +57,134 @@
      * A computed value, based on other properties' values.
      *
      * @param path full canonical name of the property
-     * @param arrayModel a special array consisting of [dependencyStr1, dependencyStr2, ..., dependencyStrN, function]
+     * @param fn the function to run to obtain the computed value
      * @param parentModel the parent object
      */
-    function observeComputed(path, arrayModel, parentModel) {
+    function observeComputed(path, fn, parentModel) {
         var
-            fn;
+            dependencies;
 
-        // TODO this is changing the original array - not the best way to do it - it would be better if the array was left unchanged
-        // TODO other option here would be to update the property, assigning it to the function rather than the array - the array would be discarded
-        fn = arrayModel.pop();
+        dependencies = fn.toString().match(/function\s*[^(]*\(([^)]*)\)/);
 
-        arrayModel.forEach(function (dependency) {
-            addObserver(dependency, function () {
-                var
-                    oldValue,
+        if (dependencies) {
+            dependencies = dependencies[1].replace(/\s+/g, '').split(',');
+
+            dependencies.forEach(function (dependency) {
+                /*
+                    For each dependency, we add an observer for that dependency and watch it for changes.
+                    Every time a dependency changes, our observer is called and then we should call fn() and get its
+                    return value, which in turn should be passed to the DOM elements that are bound to this
+                    computed property.
+                 */
+                addObserver(dependency, function () {
+                    var
+                        oldValue,
+                        result;
+
+                    /*
+                        Call the computed function and obtain its return value.
+                     */
                     result = fn.call(model);
 
-                // TODO is it viable to recover the old value and pass it too? For now, just pass undefined
-                trigger(path, oldValue, result);
+                    /*
+                        Triggers DOM elements that are bound to this computed property.
+                     */
+                    // TODO is it viable to recover the old value and pass it too? For now, just pass undefined
+                    trigger(path, oldValue, result);
+                });
             });
-        });
-    }
+        }
 
-    function observeArray(path, objModel, parentModel) {
-
-        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/observe
-        Array.observe(objModel, function (changes) {
-            changes.forEach(function (change) {
-                var
-                    caname = canonicalArray(path, change.name);
-
-                switch (change.type) {
-                    case 'add':
-                        // TODO this trigger should in fact trigger the entire array too, so that [model-array]s could update its loops accordingly
-                        trigger(caname, change.oldValue, objModel[change.name]);
-                        // must also observe new child and its descendants - if it is an object
-                        observe(caname, objModel[change.name], objModel);
-                        break;
-                    case 'update':
-                        // TODO this trigger should in fact trigger the entire array too, so that [model-array]s could update its loops accordingly
-                        trigger(caname, change.oldValue, objModel[change.name]);
-                        break;
-                    case 'delete':
-                        // TODO this trigger should in fact trigger the entire array too, so that [model-array]s could update its loops accordingly
-                        trigger(caname, change.oldValue, objModel[change.name]);
-                        // TODO should all descendants be unobserved somehow?
-                        // unobserve(objModel[change.name], objModel);
-                        break;
-                    case 'splice':
-                        console.info('Splice index: ' + change.index);
-                        console.info('Splice removed:');
-                        console.dir(change.removed);
-                        console.info('Splice added count: ' + change.addedCount);
-                        triggerArray(caname, change.oldValue, change.object, change.index, change.removed, change.addedCount);
-                        // TODO see what was added and observe that too
-                        break;
-                }
-            })
-        });
-
-        // Recursively call each array item
-        objModel.forEach(function (arrayItem, index) {
-            observe(canonicalArray(path, index), arrayItem, objModel);
-        });
+        // TODO what to do if the function has no parameters, i.e., no dependencies were specified? Should the
+        // function be called every time some observed changes or should it be ignored?
     }
 
     function observeObject(path, objModel, parentModel) {
+        var
+            Base = Array.isArray(objModel) ? Array : Object;
 
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/observe
-        Object.observe(objModel, function (changes) {
+        Base.observe(objModel, function (changes) {
             changes.forEach(function (change) {
                 var
-                    newPath = canonical(path, change.name);
+                    newPath;
 
+                // See http://stackoverflow.com/a/31016527/778272 for a discussion on Array's change types
                 switch (change.type) {
                     case 'add':
+                        newPath = canonical(path, change.name);
                         trigger(newPath, change.oldValue, change.object[change.name]);
                         // must observe the new value and all its descendants - if it is an object:
                         observe(newPath, objModel[change.name], objModel);
                         break;
                     case 'update':
+                        newPath = canonical(path, change.name);
                         trigger(newPath, change.oldValue, change.object[change.name]);
+                        // TODO when a property is updated, probably we should also descend on it (if it is an
+                        // object) and observe everything down there too
                         break;
                     case 'delete':
+                        newPath = canonical(path, change.name);
                         trigger(newPath, change.oldValue, change.object[change.name]);
                         // TODO should all descendants be unobserved somehow?
                         // unobserve(objModel[change.name], objModel);
+                        break;
+                    case 'splice':
+                        newPath = path; // because change.name is undefined in this case, as the change occurred to the array itself
+                        console.info(newPath);
+                        console.info('Splice index: ' + change.index);
+                        console.info('Splice removed:');
+                        console.dir(change.removed);
+                        console.info('Splice added count: ' + change.addedCount);
+                        triggerArray(newPath, change.oldValue, change.object, change.index, change.removed, change.addedCount);
+                        // TODO see what was added and observe that too
                         break;
                 }
             });
         });
 
-        // Recursively call each object's property
-        Object.keys(objModel).forEach(function (propName) {
-            observe(canonical(path, propName), objModel[propName], objModel);
-        });
+        if (Array.isArray(objModel)) {
+            // Recursively call each array item
+            objModel.forEach(function (arrayItem, index) {
+                // TODO check if canonicalArray() is the best way to represent the array item
+                observe(canonicalArray(path, index), arrayItem, objModel);
+            });
+        } else {
+            // Recursively call each object's property
+            Object.keys(objModel).forEach(function (propName) {
+                observe(canonical(path, propName), objModel[propName], objModel);
+            });
+        }
     }
 
+    /**
+     * Receives a new model `objModel` and adds an observer to it.
+     *
+     * Recursively descends on each property of the new model, checking if it points to another object and observing
+     * it too (Object.observe() doesn't do that for you automatically and you won't be notified in object foo if
+     * some property foo.bar.baz changes, unless you explicitly observe foo.bar).
+     *
+     * If you are observing `foo` and `foo.bar` is a
+     * [primitive](https://developer.mozilla.org/en-US/docs/Glossary/Primitive), you don't need to bother observing it
+     * directly (in fact, you can't - you can only observe Objects) because `foo` is already going to be notified for
+     * it.
+     *
+     * Arrays are a special kind of Object that have their own Array.observe(), which descends from Object.observe()
+     * and adds the change type `splice`. See http://stackoverflow.com/a/31016869/778272.
+     *
+     * @param path
+     * @param objModel
+     * @param parentModel
+     */
     function observe(path, objModel, parentModel) {
 
         console.info('Observing <' + path + '>');
 
-        /*
-         Observes only non-null objects and arrays. Every other type of variable is silently ignored.
-         Reference on variable types:
-         https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof
-         */
-        if ($.isArray(objModel)) {
-
-            /*
-             If the array contains a function as its last item, it is interpreted as a special object.
-             This special object has the format [dependency_1, dependency_2, ..., dependency_N, fn].
-             For every dependency, every time one of them changes, the function fn must be called.
-             */
-            if (typeof objModel[objModel.length - 1] == 'function') {
-                observeComputed(path, objModel, parentModel);
-            } else {
-                observeArray(path, objModel, parentModel);
-            }
-
-        } else if ((typeof objModel === 'object') && (objModel !== null)) {
+        if ((typeof objModel == 'object') && (objModel !== null)) {
             observeObject(path, objModel, parentModel);
+        } else if (typeof objModel == 'function') { // TODO function may also be of type $.databind.computed()
+            observeComputed(path, objModel, parentModel);
         }
-
-        // TODO must trigger a forced update in the first pass, so that all observers are aware of each initial value
-        // I think the easier way is to iterate over Object.keys(bindings) and trigger everybody manually
     }
 
     function triggerArray(canonicalName, oldValue, newValue, index, removed, addedCount) {
@@ -194,23 +196,29 @@
 
         if (bindings[canonicalName]) {
             bindings[canonicalName].forEach(function (observer) {
-
-                console.info('Triggering observer ' + observer.prop('tagName') + ' for array ' + canonicalName);
+                var
+                    insertionMarker;
 
                 if (observer instanceof jQuery) {
+
+                    console.info('Triggering observer ' + observer.prop('tagName') + ' for array ' + canonicalName);
 
                     observer.hide(); // make sure the template is hidden
 
                     existingClonedItems = observer.nextAll('[model^="' + canonicalName + '["]'); // matches all siblings with attribute "model=name[*]"
+
+                    console.info('Cloned object count: ' + existingClonedItems.length);
 
                     // first update removed items...
                     if (removed.length > 0) {
                         existingClonedItems.slice(index, index + removed.length).remove();
                     }
 
+                    insertionMarker = existingClonedItems.length ? existingClonedItems.eq(-1) : observer;
+
                     // ...then update added items
                     if (addedCount > 0) {
-                        if (existingClonedItems.length == 0) {
+                        //if (existingClonedItems.length == 0) {
                             while (addedCount--) {
 
                                 elemIndex = index + addedCount;
@@ -218,7 +226,8 @@
 
                                 elem = observer.clone();
                                 elem.attr('model', caname);
-                                elem.insertAfter(observer);
+
+                                elem.insertAfter(insertionMarker);
 
                                 elem.find('[model^="' + canonicalName + '[]"]').each(function () {
                                     $(this).attr('model', $(this).attr('model').replace(/\[]/, '['+ elemIndex + ']'));
@@ -228,8 +237,12 @@
 
                                 elem.show();
                             }
-                        }
+                        //}
                     }
+
+                    // TODO MAJOR every time elements are added/removed, every previously existing element displaced
+                    // after the new element should have its indices updated in the DOM. Another option is to remove
+                    // those indices completely. Are they really necessary?
 
                 } else if (typeof observer == 'function') {
 
@@ -292,55 +305,4 @@
         triggerAll(ROOT_PROPERTY, model);
     };
 
-//    $.databind = function DataBindFactory(annotatedModel) {
-//        var
-//            databind = {
-//                bindings: {},
-//                model: {}
-//            };
-//
-//        Object.keys(annotatedModel).forEach(function (propName) {
-//            var
-//                prop = annotatedModel[propName];
-//
-//            databind.model[propName] = prop.value;
-//            databind.bindings[propName] = $.isArray(prop.bindings) ? prop.bindings : [];
-//        });
-//
-//        // Model -> View binding
-//        Object.observe(databind.model, function (changes) {
-//            changes.forEach(function (change) {
-//                databind.bindings[change.name].forEach(function (binding) {
-//
-//                    if ($(binding).is('input,select,textarea')) {
-//                        $(binding).val(databind.model[change.name]);
-//                    } else {
-//                        $(binding).text(databind.model[change.name]);
-//                    }
-//                });
-//            });
-//        });
-//
-//        // View -> Model binding
-//        Object.keys(bindings).forEach(function (propName) {
-//            var
-//                bindingSelectors = databind.bindings[propName];
-//
-//            bindingSelectors.forEach(function (bindingSelector) {
-//                // account for future elements, binding the event on `document` rather than the direct element
-//                $(document).on('change keyup', bindingSelector, function () {
-//                    var
-//                        elem = $(this);
-//
-//                    // only cares to bind if element is some kind of input
-//                    if (elem.is('input,select,textarea')) {
-//                        databind.model[propName] = elem.val();
-//                    }
-//                });
-//            });
-//        });
-//
-//        return databind;
-//    };
-
-})(jQuery);
+})(jQuery, console);
