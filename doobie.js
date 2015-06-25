@@ -2,6 +2,7 @@
     var
         model,
         ROOT_PROPERTY = '',
+        computedWrappers = {},
         // a map of property -> [observers]
         bindings = {};
 
@@ -64,28 +65,32 @@
             dependencies = dependencies[1].replace(/\s+/g, '').split(',');
 
             dependencies.forEach(function (dependency) {
+
+                computedWrappers[path] = function () {
+                    var
+                        oldValue,
+                        result;
+
+                    /*
+                     Call the computed function and obtain its return value.
+                     */
+                    // TODO add parameters from list of dependencies
+                    result = fn.call(model);
+
+                    /*
+                     Triggers DOM elements that are bound to this computed property.
+                     */
+                    // TODO is it viable to recover the old value and pass it too? For now, just pass undefined
+                    trigger(path, oldValue, result);
+                };
+
                 /*
                     For each dependency, we add an observer for that dependency and watch it for changes.
                     Every time a dependency changes, our observer is called and then we should call fn() and get its
                     return value, which in turn should be passed to the DOM elements that are bound to this
                     computed property.
                  */
-                addObserver(dependency, function () {
-                    var
-                        oldValue,
-                        result;
-
-                    /*
-                        Call the computed function and obtain its return value.
-                     */
-                    result = fn.call(model);
-
-                    /*
-                        Triggers DOM elements that are bound to this computed property.
-                     */
-                    // TODO is it viable to recover the old value and pass it too? For now, just pass undefined
-                    trigger(path, oldValue, result);
-                });
+                addObserver(dependency, computedWrappers[path]);
             });
         }
 
@@ -286,6 +291,10 @@
             Object.keys(objModel).forEach(function (propName) {
                 triggerAll(canonical(path, propName), objModel[propName]);
             })
+        } else if (typeof objModel == 'function') {
+            // if the value is a function, we should not call it directly, but instead call the wrapper that was
+            // made in observeComputed(), which adds a this context, among other things.
+            trigger(path, null, computedWrappers[path]);
         } else {
             trigger(path, null, objModel);
         }
@@ -293,9 +302,18 @@
 
     $.doobie = function DoobieFactory(_model) {
         model = _model;
+
+        console.info('-------------------- Scanning DOM --------------------');
         scanDOMForBindings();
+
+        console.info('-------------------- Bindings --------------------');
         console.dir(bindings);
+
+        console.info('-------------------- Creating observers --------------------');
+        console.dir(model);
         observe(ROOT_PROPERTY, model);
+
+        console.info('-------------------- Triggering for the first time --------------------');
         triggerAll(ROOT_PROPERTY, model);
     };
 

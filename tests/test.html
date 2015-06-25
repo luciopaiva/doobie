@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <title></title>
 
-    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css"/>
+    <link rel="stylesheet" href="../bower_components/bootstrap/dist/css/bootstrap.css"/>
 
     <link rel="stylesheet" href="test.css"/>
 
-    <script src="bower_components/jquery/dist/jquery.js"></script>
-    <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+    <script src="../bower_components/jquery/dist/jquery.js"></script>
+    <script src="../bower_components/bootstrap/dist/js/bootstrap.js"></script>
 
-    <script src="binding.js"></script>
+    <script src="../doobie.js"></script>
     <script src="test.js"></script>
 </head>
 <body>
@@ -26,26 +26,26 @@
                     <div class="form-group">
                         <label class="col-md-2 control-label">First Name</label>
                         <div class="col-md-10">
-                            <p class="form-control-static" model="firstName"></p>
+                            <p class="form-control-static" doobie="firstName"></p>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-md-2 control-label">Last Name</label>
                         <div class="col-md-10">
-                            <p class="form-control-static" model="lastName"></p>
+                            <p class="form-control-static" doobie="lastName"></p>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-md-2 control-label">Full Name</label>
                         <div class="col-md-10">
-                            <p class="form-control-static" model="fullName"></p>
+                            <p class="form-control-static" doobie="fullName"></p>
                         </div>
                     </div>
                 </form>
 
-                <!--<p>First name: <span model="firstName"></span></p>-->
-                <!--<p>Last name: <span model="lastName"></span></p>-->
-                <!--<p>Full name: <span model="fullName"></span></p>-->
+                <!--<p>First name: <span doobie="firstName"></span></p>-->
+                <!--<p>Last name: <span doobie="lastName"></span></p>-->
+                <!--<p>Full name: <span doobie="fullName"></span></p>-->
 
                 <table class="table">
                     <tr>
@@ -53,10 +53,10 @@
                         <th>Resource</th>
                         <th>Quantity</th>
                     </tr>
-                    <tr class="resource-template hidden" model-array="resources">
-                        <td class="resource-index" model-array-item="index"></td>
-                        <td class="resource-name" model-array-item="name"></td>
-                        <td><input class="resource-quantity" type="text" model-array-item="quantity"/></td>
+                    <tr class="resource-template hidden" doobie="resources">
+                        <td class="resource-index" doobie-nop="index"></td>
+                        <td class="resource-name" doobie-nop="name"></td>
+                        <td><input class="resource-quantity" type="text" doobie-nop="quantity"/></td>
                     </tr>
                 </table>
 
@@ -69,7 +69,7 @@
 
     <div class="row">
         <div class="col-md-offset-2 col-md-8">
-            <p>Total amount: <span model="totalAmount"></span> units</p>
+            <p>Total amount: <span doobie="totalAmount"></span> units</p>
         </div>
     </div>
 </div>

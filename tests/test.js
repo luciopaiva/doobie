@@ -4,9 +4,10 @@ var
     testModel = {
         firstName: 'Ze',
         lastName: 'das Couves',
-        fullName: ['firstName', 'lastName', function () {
+        fullName: function (firstName, lastName) {
+            console.info(this.firstName + ' ' + this.lastName);
             return this.firstName + ' ' + this.lastName;
-        }],
+        },
         resources: [
             {
                 name: 'Iron',
@@ -21,14 +22,14 @@ var
                 quantity: 800
             }
         ],
-        totalAmount: ['resources', function getTotalAmount() {
+        totalAmount: function getTotalAmount(resources) {
             return this.resources.reduce(function (sum, resource) {
                 return sum + resource.quantity;
             }, 0);
-        }]
+        }
     };
 
 $(function () {
 
-    $.databind(testModel);
+    $.doobie(testModel);
 });
