@@ -1,10 +1,23 @@
 {
-  "name": "player-map",
-  "version": "1.0.0",
-  "authors": [
-    "Lucio Paiva <lucio@zwift.com>"
+  "name": "doobie",
+  "keywords": [
+    "data-binding",
+    "databind",
+    "binding",
+    "two-way",
+    "angular",
+    "jquery",
+    "library"
   ],
-  "main": "index.html",
+  "authors": [
+    {
+      "name": "Lucio Paiva",
+      "homepage": "http://www.github.com/luciopaiva"
+    }
+  ],
+  "description": "A minimalist two-way data-binding library for those who don't need big fat frameworks like Angular.js.",
+  "version": "0.1.0",
+  "main": "doobie.js",
   "license": "MIT",
   "ignore": [
     "**/.*",
@@ -14,8 +27,10 @@
     "tests"
   ],
   "dependencies": {
-    "jquery": "~2.1.4",
-    "bootstrap": "~3.3.5",
-    "font-awesome": "~4.3.0"
+    "jquery": "~2.1.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/luciopaiva/doobie.git"
   }
 }

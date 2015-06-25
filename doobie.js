@@ -28,27 +28,21 @@
     }
 
     /**
-     * Elements annotated with attributes [model] or [model-array] will be added to the bindings map.
+     * Elements annotated with attribute [doobie] will be added to the bindings map.
      */
     function scanDOMForBindings(root) {
 
         root = root || $(document);
 
-        root.find('[model]').each(function () {
+        root.find('[doobie]').each(function () {
             var
-                path = $(this).attr('model');
+                path = $(this).attr('doobie');
 
-            if (!/\[]/.test(path)) { // avoid array templates (model attributes containing "[]")
+            if (!/\[]/.test(path)) { // avoid array templates (doobie attributes containing "[]")
                 addObserver(path, $(this));
                 console.info('Registered <' + $(this).prop('tagName') + '> as observer for property "' + path + '"');
             }
         });
-
-        // TODO implement a system for binding [model-array]s
-//        $('[model-array]').each(function () {
-//            addObserver($(this).attr('model'), $(this));
-//            console.info('Registered <' + $(this).prop('tagName') + '> as array observer for property "' + $(this).attr('model-array') + '"');
-//        });
 
         // TODO: listen for future elements (MutationObserver)
     }
@@ -182,7 +176,7 @@
 
         if ((typeof objModel == 'object') && (objModel !== null)) {
             observeObject(path, objModel, parentModel);
-        } else if (typeof objModel == 'function') { // TODO function may also be of type $.databind.computed()
+        } else if (typeof objModel == 'function') { // TODO function may also be of type $.doobie.computed()
             observeComputed(path, objModel, parentModel);
         }
     }
@@ -297,7 +291,7 @@
         }
     }
 
-    $.databind = function DataBindFactory(_model) {
+    $.doobie = function DoobieFactory(_model) {
         model = _model;
         scanDOMForBindings();
         console.dir(bindings);

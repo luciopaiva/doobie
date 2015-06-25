@@ -1,51 +1,75 @@
 
-A KISS two-way data-binding library.
+A minimalist two-way data-binding library for those that are looking for something leaner than big fat frameworks like 
+Angular.js.
 
-## How to use
+## How to install
+
+    bower install --save doobie
+
+Or if you're using npm:
+
+    npm install --save doobie
 
 Just include it in your HTML file. You will also need to include jQuery *before* including this library:
 
-    <script src="binding.js" />
     <script src="jquery.js" />
+    <script src="doobie.js" />
 
-Then all that you have to do is invoke `$.databind()` and pass your model to the library:
+Then all that you have to do is invoke `$.doobie()` and pass your model to the library:
 
-    $.databind({
+    $.doobie({
         firstName: 'Foo',
         lastName: 'von Bar',
-        fullName: ['firstName', 'lastName', function() {
+        fullName: function(firstName, lastName) {
             return this.firstName + ' ' + this.lastName;
-        }]
+        }
     });
 
-And then, in your HTML, reference your model using `model` attributes. 
+And then, in your HTML, reference your model using `doobie` attributes. See below. 
 
 ## One-way data-binding (model -> view)
 
 For instance:
 
-    <p model="firstName"></p>
+    <p doobie="firstName"></p>
 
-The `<p>` element's content will be filled with the value from `firstName` and everytime it changes, `<p>` will be 
-immediately updated.
+The `<p>` element's content will immediately be filled with the value from `firstName` and every time it changes. It 
+works with every element that is a container.
 
 ## Two-way data-binding (model <-> view)
 
 If you bind it to an `<input>` tag, it will work as a two-way binding. Any update to the `<input>` will also trigger 
 an update to the property, and vice-versa:
 
-    <input type="text" model="lastName" />
+    <input type="text" doobie="lastName" />
+
+It works for `textarea` elements too. `select` is on the roadmap yet.
 
 ## Computed properties
 
-In the example we have a property named `fullName` whose value is a special array. Array's last element is a function
- which should be called every time at least one of the properties listed in the array (always coming before the 
- function) has changed. Computed properties are one-way bindings, since they can't be set.
+For cases that you want to bind to the DOM some processed version of the model you have, you should use a computed 
+property. It allows you to specify a function that will be called every time some of its dependencies change. For 
+example, say you have the following model:
+
+    $.doobie({
+        firstName: 'Foo',
+        lastName: 'von Bar',
+        fullName: function(firstName, lastName) {
+            return this.firstName + ' ' + this.lastName;
+        }
+    });
+
+And then your HTML has a `div` like this:
+ 
+    Your name is <span doobie="fullName"></span>.
+
+Doobie watches for those function's parameters and parses them as properties of your model. So, every time at least 
+one of those properties change, your function is called to update DOM elements that are bound to it.
 
 ## Arrays
 
 It is a very common pattern to map an array to rows in a table in HTML. In general, you may want to map an array to a
- list of any element type. To be able to do that, you can use the special attribute `model-array`, which will use the
-  element as a template that will be cloned one time for each element in the array.
+ list of any element type. To be able to do that, you can the same attribute `doobie` that you use for other bindings.
+ The DOM will be kept up to date with the array every time an item is added, updated or removed from it.
 
-Array elements themselves can contain other objects, even arrays, and the binding will still function.
+Array elements themselves can contain other objects, even other arrays, and the binding will still work as expected.

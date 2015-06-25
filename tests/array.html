@@ -5,7 +5,7 @@
     <title></title>
 
     <script src="../bower_components/jquery/dist/jquery.js"></script>
-    <script src="../binding.js"></script>
+    <script src="../doobie.js"></script>
 
     <script src="array.js"></script>
 </head>
@@ -17,12 +17,12 @@
         <th>Index</th>
         <th>Value</th>
     </tr>
-    <tr model="letters">
-        <td model="letters[].$index">
+    <tr doobie="letters">
+        <td doobie="letters[].$index">
             $index
-            <span model="letters[].foo[]"></span>
+            <span doobie="letters[].foo[]"></span>
         </td>
-        <td model="letters[].$value">$value</td>
+        <td doobie="letters[].$value">$value</td>
     </tr>
 </table>
 
