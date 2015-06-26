@@ -26,13 +26,19 @@
                     <div class="form-group">
                         <label class="col-md-2 control-label">First Name</label>
                         <div class="col-md-10">
-                            <p class="form-control-static" doobie="firstName"></p>
+                            <input type="text" class="form-control" doobie="firstName"></p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-md-2 control-label">First Name</label>
+                        <div class="col-md-10">
+                            <input type="text" class="form-control" doobie="firstName"></p>
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="col-md-2 control-label">Last Name</label>
                         <div class="col-md-10">
-                            <p class="form-control-static" doobie="lastName"></p>
+                            <input type="text" class="form-control" doobie="lastName"></p>
                         </div>
                     </div>
                     <div class="form-group">
@@ -53,7 +59,7 @@
                         <th>Resource</th>
                         <th>Quantity</th>
                     </tr>
-                    <tr class="resource-template hidden" doobie="resources">
+                    <tr class="resource-template" doobie="resources">
                         <td class="resource-index" doobie-nop="index"></td>
                         <td class="resource-name" doobie-nop="name"></td>
                         <td><input class="resource-quantity" type="text" doobie-nop="quantity"/></td>

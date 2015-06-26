@@ -3,8 +3,21 @@
         model,
         ROOT_PROPERTY = '',
         computedWrappers = {},
-        // a map of property -> [observers]
+        // a map of canonical property name -> value
+        modelParents = {};
+        // a map of canonical property name -> [observers]
         bindings = {};
+
+    function splitCanonical(path) {
+        var
+            splitIndex = path.search(/\.[^.]+$/);
+
+        if (splitIndex == -1) {
+            return ['', path];
+        } else {
+            return [path.substring(0, splitIndex), path.substring(splitIndex + 1)];
+        }
+    }
 
     function canonical(path, prop) {
         return path.length ? path + '.' + prop : prop;
@@ -37,11 +50,29 @@
 
         root.find('[doobie]').each(function () {
             var
-                path = $(this).attr('doobie');
+                self = $(this),
+                path = self.attr('doobie');
 
             if (!/\[]/.test(path)) { // avoid array templates (doobie attributes containing "[]")
-                addObserver(path, $(this));
-                console.info('Registered <' + $(this).prop('tagName') + '> as observer for property "' + path + '"');
+                addObserver(path, self);
+                console.info('Registered <' + self.prop('tagName') + '> as observer for property "' + path + '"');
+
+                // two-way binding elements:
+                if (self.is('input,select,textarea')) {
+                    self.on('keyup change', function() {
+                        var
+                            parent, prop, canArr = splitCanonical(path);
+
+                        parent = canArr[0];
+                        prop = canArr[1];
+
+                        // trigger change only if value differs from current one:
+                        if (self.val() !== modelParents[parent][prop]) {
+                            // must access its parent and then access the property related to it
+                            modelParents[parent][prop] = self.val();
+                        }
+                    });
+                }
             }
         });
 
@@ -142,6 +173,8 @@
             });
         });
 
+        modelParents[path] = objModel;
+
         if (Array.isArray(objModel)) {
             // Recursively call each array item
             objModel.forEach(function (arrayItem, index) {
@@ -204,7 +237,8 @@
 
                     observer.hide(); // make sure the template is hidden
 
-                    existingClonedItems = observer.nextAll('[model^="' + canonicalName + '["]'); // matches all siblings with attribute "model=name[*]"
+                    existingClonedItems = observer.nextAll('[doobie^="' + canonicalName + '["]'); // matches all
+                    // siblings with attribute "model=name[*]"
 
                     console.info('Cloned object count: ' + existingClonedItems.length);
 
@@ -224,12 +258,12 @@
                                 caname = canonicalArray(canonicalName, elemIndex);
 
                                 elem = observer.clone();
-                                elem.attr('model', caname);
+                                elem.attr('doobie', caname);
 
                                 elem.insertAfter(insertionMarker);
 
-                                elem.find('[model^="' + canonicalName + '[]"]').each(function () {
-                                    $(this).attr('model', $(this).attr('model').replace(/\[]/, '['+ elemIndex + ']'));
+                                elem.find('[doobie^="' + canonicalName + '[]"]').each(function () {
+                                    $(this).attr('doobie', $(this).attr('doobie').replace(/\[]/, '['+ elemIndex + ']'));
                                 });
 
                                 scanDOMForBindings(elem);
