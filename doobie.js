@@ -1,5 +1,6 @@
 (function ($, console) {
     var
+        DEBUG = false,
         model,
         ROOT_PROPERTY = '',
         computedWrappers = {},
@@ -55,7 +56,7 @@
 
             if (!/\[]/.test(path)) { // avoid array templates (doobie attributes containing "[]")
                 addObserver(path, self);
-                console.info('Registered <' + self.prop('tagName') + '> as observer for property "' + path + '"');
+                DEBUG && console.info('Registered <' + self.prop('tagName') + '> as observer for property "' + path + '"');
 
                 // two-way binding elements:
                 if (self.is('input,select,textarea')) {
@@ -161,11 +162,11 @@
                         break;
                     case 'splice':
                         newPath = path; // because change.name is undefined in this case, as the change occurred to the array itself
-                        console.info(newPath);
-                        console.info('Splice index: ' + change.index);
-                        console.info('Splice removed:');
-                        console.dir(change.removed);
-                        console.info('Splice added count: ' + change.addedCount);
+                        DEBUG && console.info(newPath);
+                        DEBUG && console.info('Splice index: ' + change.index);
+                        DEBUG && console.info('Splice removed:');
+                        DEBUG && console.dir(change.removed);
+                        DEBUG && console.info('Splice added count: ' + change.addedCount);
                         triggerArray(newPath, change.oldValue, change.object, change.index, change.removed, change.addedCount);
                         // TODO see what was added and observe that too
                         break;
@@ -210,7 +211,7 @@
      */
     function observe(path, objModel, parentModel) {
 
-        console.info('Observing <' + path + '>');
+        DEBUG && console.info('Observing <' + path + '>');
 
         if ((typeof objModel == 'object') && (objModel !== null)) {
             observeObject(path, objModel, parentModel);
@@ -233,14 +234,14 @@
 
                 if (observer instanceof jQuery) {
 
-                    console.info('Triggering observer ' + observer.prop('tagName') + ' for array ' + canonicalName);
+                    DEBUG && console.info('Triggering observer ' + observer.prop('tagName') + ' for array ' + canonicalName);
 
                     observer.hide(); // make sure the template is hidden
 
                     existingClonedItems = observer.nextAll('[doobie^="' + canonicalName + '["]'); // matches all
                     // siblings with attribute "model=name[*]"
 
-                    console.info('Cloned object count: ' + existingClonedItems.length);
+                    DEBUG && console.info('Cloned object count: ' + existingClonedItems.length);
 
                     // first update removed items...
                     if (removed.length > 0) {
@@ -288,12 +289,12 @@
     }
 
     function trigger(canonicalName, oldValue, newValue) {
-        console.info('TRIGGER <' + canonicalName + '>');
+        DEBUG && console.info('TRIGGER <' + canonicalName + '>');
 
         if (bindings[canonicalName]) {
             bindings[canonicalName].forEach(function (observer) {
 
-                console.info('Triggering observer ' + observer + ' for ' + canonicalName);
+                DEBUG && console.info('Triggering observer ' + observer + ' for ' + canonicalName);
 
                 if (observer instanceof jQuery) {
 
@@ -318,7 +319,7 @@
     }
 
     function triggerAll(path, objModel) {
-        console.info('TRIGGER ALL: <' + path + '>');
+        DEBUG && console.info('TRIGGER ALL: <' + path + '>');
 
         if ($.isArray(objModel)) {
             triggerArray(path, [], objModel, 0, [], objModel.length);
@@ -341,17 +342,17 @@
     $.doobie = function DoobieFactory(_model) {
         model = _model;
 
-        console.info('-------------------- Scanning DOM --------------------');
+        DEBUG && console.info('-------------------- Scanning DOM --------------------');
         scanDOMForBindings();
 
-        console.info('-------------------- Bindings --------------------');
-        console.dir(bindings);
+        DEBUG && console.info('-------------------- Bindings --------------------');
+        DEBUG && console.dir(bindings);
 
-        console.info('-------------------- Creating observers --------------------');
-        console.dir(model);
+        DEBUG && console.info('-------------------- Creating observers --------------------');
+        DEBUG && console.dir(model);
         observe(ROOT_PROPERTY, model);
 
-        console.info('-------------------- Triggering for the first time --------------------');
+        DEBUG && console.info('-------------------- Triggering for the first time --------------------');
         triggerAll(ROOT_PROPERTY, model);
     };
 

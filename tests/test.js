@@ -5,7 +5,6 @@ var
         firstName: 'Ze',
         lastName: 'das Couves',
         fullName: function (firstName, lastName) {
-            console.info(this.firstName + ' ' + this.lastName);
             return this.firstName + ' ' + this.lastName;
         },
         resources: [
