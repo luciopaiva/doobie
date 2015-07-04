@@ -1,6 +1,18 @@
 
+---
+
+**Do not download it yet - the library is still under construction!**
+
+---
+
 A minimalist two-way data-binding library for those that are looking for something leaner than big fat frameworks like 
 Angular.js.
+
+---
+
+**Do not download it yet - the library is still under construction!**
+
+---
 
 ## How to install
 
