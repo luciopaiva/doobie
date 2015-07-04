@@ -298,7 +298,11 @@
                 if (observer instanceof jQuery) {
 
                     if ($(observer).is('input,select,textarea')) {
-                        $(observer).val(newValue);
+                        // Avoid updating an input if it was the element that triggered the change, otherwise it
+                        // could change the cursor position and annoy the user:
+                        if ($(observer).val() != newValue) {
+                            $(observer).val(newValue);
+                        }
                     } else {
                         $(observer).text(newValue);
                     }
