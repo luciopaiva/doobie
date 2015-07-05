@@ -21,6 +21,9 @@ var
                 quantity: 800
             }
         ],
+        changeFirstName: function () {
+            this.firstName = 'Maria';
+        },
         totalAmount: function getTotalAmount(resources) {
             return this.resources.reduce(function (sum, resource) {
                 return sum + resource.quantity;

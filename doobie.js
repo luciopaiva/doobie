@@ -1,11 +1,17 @@
 (function ($, console) {
     var
         DEBUG = false,
-        model,
         ROOT_PROPERTY = '',
+        ATTR_DOOBIE_MODEL = 'doobie',
+        ATTR_DOOBIE_CLICK = 'doobie-click';
+
+    var
+        model,
         computedWrappers = {},
         // a map of canonical property name -> value
-        modelParents = {};
+        modelParents = {},
+        // a map of functions exposed by the model
+        modelFunctions = {},
         // a map of canonical property name -> [observers]
         bindings = {};
 
@@ -43,16 +49,28 @@
     }
 
     /**
-     * Elements annotated with attribute [doobie] will be added to the bindings map.
+     * Elements annotated with attribute ATTR_DOOBIE_MODEL will be added to the bindings map.
      */
     function scanDOMForBindings(root) {
 
         root = root || $(document);
 
-        root.find('[doobie]').each(function () {
+        root.find('[' + ATTR_DOOBIE_CLICK + ']').each(function () {
             var
                 self = $(this),
-                path = self.attr('doobie');
+                modelFunctionName = self.attr(ATTR_DOOBIE_CLICK);
+
+            self.click(function () {
+                if (typeof modelFunctions[modelFunctionName] == 'function') {
+                    modelFunctions[modelFunctionName]();
+                }
+            });
+        });
+
+        root.find('[' + ATTR_DOOBIE_MODEL + ']').each(function () {
+            var
+                self = $(this),
+                path = self.attr(ATTR_DOOBIE_MODEL);
 
             if (!/\[]/.test(path)) { // avoid array templates (doobie attributes containing "[]")
                 addObserver(path, self);
@@ -91,11 +109,15 @@
         var
             dependencies;
 
+        // parse function script and identify its parameters
         dependencies = fn.toString().match(/function\s*[^(]*\(([^)]*)\)/);
 
+        // probably a redundant check - will match even if function has no parameters
         if (dependencies) {
             dependencies = dependencies[1].replace(/\s+/g, '').split(',');
 
+            // TODO what to do if the function has no parameters, i.e., no dependencies were specified? Should the
+            // function be called every time some observed changes or should it be ignored?
             dependencies.forEach(function (dependency) {
 
                 computedWrappers[path] = function () {
@@ -126,8 +148,8 @@
             });
         }
 
-        // TODO what to do if the function has no parameters, i.e., no dependencies were specified? Should the
-        // function be called every time some observed changes or should it be ignored?
+        // It could also be directly called by ATTR_DOOBIE_CLICK, so we have to keep a map of functionName -> function
+        modelFunctions[path] = fn.bind(model);
     }
 
     function observeObject(path, objModel, parentModel) {
@@ -259,12 +281,12 @@
                                 caname = canonicalArray(canonicalName, elemIndex);
 
                                 elem = observer.clone();
-                                elem.attr('doobie', caname);
+                                elem.attr(ATTR_DOOBIE_MODEL, caname);
 
                                 elem.insertAfter(insertionMarker);
 
-                                elem.find('[doobie^="' + canonicalName + '[]"]').each(function () {
-                                    $(this).attr('doobie', $(this).attr('doobie').replace(/\[]/, '['+ elemIndex + ']'));
+                                elem.find('[' + ATTR_DOOBIE_MODEL + '^="' + canonicalName + '[]"]').each(function () {
+                                    $(this).attr(ATTR_DOOBIE_MODEL, $(this).attr(ATTR_DOOBIE_MODEL).replace(/\[]/, '['+ elemIndex + ']'));
                                 });
 
                                 scanDOMForBindings(elem);
